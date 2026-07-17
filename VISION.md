@@ -34,6 +34,7 @@
 - **持久化即密文（不可打破的基石）**：任何写入持久化存储的业务负载——SQLite 数据库列、blob store、落盘文件、磁盘缓存、搜索索引——都必须先经 MasterKey AEAD 加密，**严禁明文落库**。这包括剪贴板正文、标题、预览、搜索渲染字段、标签名等一切源自用户内容的数据。唯一例外是 **内容类型分类枚举**（content type / file type，如 text/image/file/link）——它是非敏感的结构化分类标签，且搜索按类型过滤依赖其明文可查；注意「文件」内容本体仍走 `EncryptedBlobStore` 加密，此处例外仅限分类标签本身，不含任何文件数据。新增任何持久化列/文件默认加密；若主张某字段可明文，必须在 PR 中论证其非敏感性并显式获批。回归此红线等同于破坏端到端加密。
 - **加密不可绕过**：Space 初始化强制设定 passphrase，MasterKey 直接加密所有本地历史；无 passphrase 则无法解密、无法存储
 - **双层传输加密**：应用层 AEAD（MasterKey per-chunk 加密）+ 传输层 QUIC 通道加密（iroh Ed25519 身份认证）
+- **移动端应用层加密**：移动端可复用 SyncClipboard v3 的轻量 HTTP 路由形状，但业务载荷必须经 XChaCha20-Poly1305 AEAD 加密；二维码只携带短时单次邀请，不携带长期可复用明文密码
 - **AAD 绑定防重放**：每条密文通过 Additional Authenticated Data 绑定到具体实体（event_id、blob_id、transfer_id+chunk_index），密文不可跨实体迁移
 - **密钥材料 zeroize-on-drop**：MasterKey、Kek、Passphrase、Plaintext、ProofDerivedKey 均实现内存归零
 - **配对安全**：passphrase 验证使用 HMAC 挑战 - 应答协议；mDNS 广播配对码的 blake3 哈希前缀，被动观察者无法获取明文码
@@ -61,7 +62,7 @@
 | daemon per-profile 单例 | fs2 文件锁保证一个 profile 只有一个 daemon 实例 |
 | AGPL-3.0-only 许可 | 任何修改后通过网络提供服务的实体必须开源对应源码 |
 | 遥测事件名一旦上线永不重命名 | 防止历史数据聚合断裂，演进通过创建 *_v2 + 废弃旧事件 |
-| Mobile 走独立 LAN HTTP 协议 | 移动端无法运行 iroh full node，SyncClipboard v3 协议足够轻量 |
+| Mobile 走独立 LAN HTTP 协议 | 移动端无法运行 iroh full node；复用 SyncClipboard v3 路由形状，并强制增加应用层 AEAD、独立设备密钥与可撤销配对 |
 
 ## 绝对禁区
 

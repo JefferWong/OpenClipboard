@@ -20,6 +20,8 @@ When documentation conflicts with code, treat the code as the source of truth an
 **For Implementation:**
 
 - [Bootstrap System](architecture/bootstrap.md) - How dependency injection works
+- [R1 上游基线](upstream-baseline.md) - UniClipboard、UniClip 与 SyncClipboard 的固定提交和导入边界
+- [移动端安全基线](architecture/mobile-security-baseline.md) - 移动端生产发布必须满足的隐私与加密门禁
 - [Local Encrypted Search Design](architecture/local-encrypted-search.md) - V1 local search architecture for encrypted history
 - [Snapshot Cache Pipeline ADR](architecture/snapshot-cache/adr-001-snapshot-cache-pipeline.md) - Cache/spool/worker design decisions
 - [Error Handling](guides/error-handling.md) - Error handling strategy

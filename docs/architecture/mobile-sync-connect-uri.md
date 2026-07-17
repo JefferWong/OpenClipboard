@@ -1,5 +1,7 @@
 # Mobile Sync Connect URI — Protocol Specification
 
+> **安全状态：仅为 legacy v1 兼容规范，禁止用于新的生产配对。** 本文定义的二维码包含可恢复的明文密码，且 Basic Auth 不提供应用层端到端加密。R1 起，新实现必须遵循 [`mobile-security-baseline.md`](mobile-security-baseline.md)：二维码改为短时单次邀请，载荷使用应用层 AEAD。本文保留用于迁移、测试向量与识别旧客户端，不构成生产发布许可。
+
 > Single source of truth for the `uniclipboard://connect` deep-link protocol used to onboard
 > mobile clients (iOS Shortcut, Android SyncClipboard-compatible clients, future native apps)
 > by encoding `base_url`, `username`, `password`, and extensible metadata into a single QR code.
