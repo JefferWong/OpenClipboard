@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+.expo-shared/
+dist/
+build/
+*.log
+.DS_Store
+coverage/
+
+# Documentation folders (external skills / agent notes)
+.claude/
+.ai/
+
+CHANGES.md
+.agents/

@@ -1,0 +1,95 @@
+{
+  "empty": {
+    "unconfigured": {
+      "title": "No device paired",
+      "description": "Open UniClipboard on a computer on the same Wi‑Fi network to link it and start syncing."
+    },
+    "connecting": {
+      "title": "Connecting…",
+      "description": "Reaching {{server}} on your local network."
+    },
+    "online": {
+      "title": "Your clipboard is in sync",
+      "description": "Copy something on any paired device and it'll appear here."
+    },
+    "offline": {
+      "title": "Can't reach {{server}}",
+      "description": "It isn't responding on this network. Make sure it's awake and on the same Wi‑Fi."
+    },
+    "error": {
+      "title": "Sync needs attention",
+      "description": "Access was refused or sync was paused. Check your server settings to reconnect."
+    }
+  },
+  "topBar": {
+    "selectedCount": "{{n}} selected",
+    "deselectAll": "Deselect all",
+    "searchPlaceholder": "Search clipboard",
+    "switchServerA11y": "Switch server, currently {{server}}, {{status}}",
+    "serverUnconfigured": "Not configured"
+  },
+  "a11y": {
+    "addContent": "Add content",
+    "closeMenu": "Close menu"
+  },
+  "fab": {
+    "takePhoto": "Take photo",
+    "pickImage": "Photo library",
+    "pickFile": "Choose file",
+    "uploadClipboard": "Upload clipboard",
+    "syncNow": "Sync now"
+  },
+  "quickActions": {
+    "upload": "⬆️ Upload",
+    "sync": "🔄 Sync",
+    "syncing": "  Syncing...",
+    "download": "⬇️ Download"
+  },
+  "toast": {
+    "copied": "Copied to clipboard",
+    "copyFailed": "Copy failed",
+    "copiedPlainText": "Copied as plain text",
+    "savedToGallery": "Saved to gallery",
+    "saveFailed": "Save failed",
+    "savedFile": "File saved",
+    "deleted": "Deleted",
+    "copiedSelected": "Copied selected items",
+    "syncDone": "Sync complete",
+    "syncFailed": "Sync failed",
+    "uploadedToServer": "Uploaded to server",
+    "uploadFailed": "Upload failed",
+    "savedLocally": "Saved locally",
+    "pickFileFailed": "Couldn't pick a file",
+    "pickImageFailed": "Couldn't pick an image",
+    "cameraPermissionNeeded": "Camera permission required",
+    "takePhotoFailed": "Couldn't take photo",
+    "serverSwitched": "Server switched",
+    "serverAdded": "Server added"
+  },
+  "detail": {
+    "placeholderTitle": "Select an item",
+    "placeholderDesc": "Pick any entry from the list to see its full content and actions here.",
+    "fromDevice": "From {{device}}",
+    "unknownDevice": "This device",
+    "quickActions": {
+      "select": "Select",
+      "open": "Open",
+      "save": "Save"
+    },
+    "close": "Close details"
+  },
+  "rail": {
+    "filters": "Filter",
+    "all": "All"
+  },
+  "nav": {
+    "sync": "Servers & Sync",
+    "history": "History",
+    "background": "Background",
+    "appearance": "Appearance",
+    "sms": "SMS Forwarding",
+    "storage": "Storage",
+    "about": "About",
+    "developer": "Developer Options"
+  }
+}

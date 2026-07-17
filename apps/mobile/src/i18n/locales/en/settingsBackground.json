@@ -1,0 +1,103 @@
+{
+  "main": {
+    "cardTitle": "Background auto-sync",
+    "toggle": {
+      "descTempDisabled": "Temporarily stopped; will resume after restarting the app",
+      "descNormal": "Keeps syncing the clipboard in the background, and guides you through granting the permissions it needs"
+    }
+  },
+  "advanced": {
+    "cardTitle": "Advanced options",
+    "notification": {
+      "title": "Persistent service notification",
+      "desc": "Keeping it on improves background service stability"
+    },
+    "battery": {
+      "title": "Ignore battery optimization",
+      "desc": "Prevents battery saver from interrupting background sync"
+    },
+    "download": {
+      "title": "Download from remote",
+      "desc": "Automatically download new remote content in the background"
+    },
+    "upload": {
+      "title": "Upload local clipboard",
+      "desc": "Automatically upload when the local clipboard changes in the background"
+    },
+    "clipboardAccess": {
+      "title": "Background clipboard access",
+      "method": {
+        "overlay": "Overlay",
+        "shizuku": "Shizuku"
+      },
+      "summary": {
+        "ready": "{{method}} · Ready",
+        "action-required": "{{method}} · 1 step remaining"
+      },
+      "issue": {
+        "service-unavailable": "The selected method is not running",
+        "permission-required": "Clipboard access needs authorization",
+        "system-restriction": "MIUI is blocking background clipboard access",
+        "monitoring-setup-required": "Automatic copy detection still needs setup"
+      },
+      "action": {
+        "continue": "Continue setup",
+        "change": "Change method"
+      },
+      "setup": {
+        "completed": "Background clipboard access is ready",
+        "commandCopied": "Computer authorization command copied",
+        "failed": "Setup could not be completed; make sure Shizuku is running"
+      },
+      "restriction": {
+        "title": "Turn off the MIUI clipboard restriction",
+        "text": "UniClip will use Shizuku to turn off MIUI's smart clipboard restriction so clipboard content can be read and written in the background. This may also disable the system smart clipboard feature.",
+        "confirm": "Turn off restriction"
+      },
+      "change": {
+        "title": "Change background access method",
+        "text": "After switching to {{method}}, UniClip will immediately guide you through any remaining setup.",
+        "confirm": "Use {{method}}"
+      }
+    }
+  },
+  "dialog": {
+    "enableAutoSync": {
+      "title": "Enable background auto-sync",
+      "text": "Once enabled, the app keeps syncing the clipboard in the background. We'll guide you through battery, notification, and clipboard access for the selected method. Allowing all of them gives the best result, but declining still lets you keep using the app.",
+      "confirm": "Enable"
+    },
+    "disableNotification": {
+      "title": "Turn off persistent notification",
+      "text": "Turning off the persistent notification reduces background service stability and makes it more likely the system will terminate background tasks.",
+      "confirm": "Turn off"
+    },
+    "missingNotificationPermission": {
+      "title": "Notification permission missing",
+      "text": "Notification permission hasn't been granted, so the persistent notification may not appear. We recommend allowing notifications in system settings.",
+      "confirm": "Open settings",
+      "dismiss": "Later"
+    },
+    "enableUpload": {
+      "title": "Enable background upload of local clipboard",
+      "text": "You don't need to enable this option — UniClip also lets you upload text directly from the menu that pops up when you select text.\n\nOn Android 10 and above, apps can't directly read the local clipboard in the background. You may need to enable the overlay or use another tool to work around this limitation.",
+      "confirm": "Enable"
+    },
+    "batteryFallback": {
+      "title": "Can't open system dialog",
+      "text": "The system only allows the battery optimization request to appear once per installation. Please turn off battery optimization manually in system settings.",
+      "confirm": "Open settings"
+    }
+  },
+  "toast": {
+    "autoSyncRestored": "Background auto-sync resumed",
+    "autoSyncEnabled": "Background auto-sync enabled",
+    "autoSyncDisabled": "Background auto-sync disabled",
+    "downloadEnabled": "Background remote download enabled",
+    "downloadDisabled": "Background remote download disabled",
+    "uploadEnabled": "Background local upload enabled",
+    "uploadDisabled": "Background local upload disabled",
+    "clipboardAccessChanged": "Background clipboard access method changed",
+    "setFailed": "Failed to update setting"
+  }
+}
