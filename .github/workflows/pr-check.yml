@@ -9,7 +9,8 @@ on:
     paths:
       - 'src/**'
       - 'crates/**'
-      - 'apps/**'
+      - 'apps/cli/**'
+      - 'apps/daemon/**'
       - 'src-tauri/**'
       - 'tests/e2e/**'
       - 'vendor/**'
@@ -57,7 +58,8 @@ jobs:
           filters: |
             rust:
               - 'crates/**'
-              - 'apps/**'
+              - 'apps/cli/**'
+              - 'apps/daemon/**'
               - 'src-tauri/**'
               - 'tests/e2e/**'
               - 'vendor/**'

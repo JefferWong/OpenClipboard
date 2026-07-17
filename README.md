@@ -1,6 +1,6 @@
 
 <div align="center">
-  <h1>UniClipboard</h1>
+  <h1>OpenClipboard</h1>
   <a href="https://github.com/UniClipboard/UniClipboard/releases">
     <img
       alt="Windows"
@@ -49,6 +49,9 @@
   </div>
 
 </div>
+
+> [!CAUTION]
+> **OpenClipboard is an integration-stage project, not a production release.** The mobile code still has known plaintext credential/history, legacy Basic Auth, and dependency risks. Do not use current source or CI artifacts with real passwords or private clipboard data. See [VISION.md](./VISION.md), [SECURITY.md](./SECURITY.md), and the [mobile security backlog](./docs/security/mobile-security-backlog.md). Links and badges below may refer to imported upstream projects for provenance; they do not authenticate or support an OpenClipboard release.
 
 <p align="center">English | <a href="./README_ZH.md">简体中文</a></p>
 <p align="center"><a href="./ABOUT.md">Who maintains this project? (About &amp; Trust)</a></p>

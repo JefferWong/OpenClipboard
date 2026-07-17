@@ -1,0 +1,61 @@
+name: Security hardening task
+description: Track planned security work that is safe to discuss publicly. Report undisclosed vulnerabilities privately.
+title: '[security] '
+labels: ['security']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose an unfixed vulnerability here. Use the private reporting path in `SECURITY.md`.
+
+  - type: input
+    id: backlog-id
+    attributes:
+      label: Backlog ID
+      description: Stable ID from docs/security/mobile-security-backlog.md.
+      placeholder: SEC-001
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 — release blocker
+        - P1 — required before production readiness
+        - P2 — defense in depth
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and trust boundary
+      description: State which data, platform, process, and attacker capability are in scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: List tests, inspection evidence, migration proof, and review artifacts required to close this item.
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and migration
+      description: Explain legacy data handling, downgrade behavior, and whether insecure compatibility is removed or isolated.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure check
+      options:
+        - label: This issue contains no undisclosed vulnerability details, live credentials, private keys, clipboard contents, or reusable pairing invitations.
+          required: true

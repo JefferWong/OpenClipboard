@@ -1,5 +1,7 @@
 <div align="center">
 
+  <h1>OpenClipboard</h1>
+
   <a href="https://github.com/UniClipboard/UniClipboard/releases">
     <img
       alt="Windows"
@@ -48,6 +50,9 @@
   </div>
 
 </div>
+
+> [!CAUTION]
+> **OpenClipboard 目前处于集成阶段，不是可用于生产的发布版。** 移动端仍有已知的明文凭据/历史、旧式 Basic Auth 和依赖漏洞风险。请勿把当前源码或 CI 构建产物用于真实密码或私密剪贴板数据。请先阅读 [VISION.md](./VISION.md)、[SECURITY.md](./SECURITY.md) 和[移动端安全任务清单](./docs/security/mobile-security-backlog.md)。下方部分链接和徽章来自上游项目，仅用于来源说明，不代表 OpenClipboard 已发布、已签名或提供安全支持。
 
 <p align="center"><a href="./README.md">English</a> | 简体中文</p>
 <p align="center"><a href="./ABOUT_ZH.md">谁在维护这个项目？（关于本项目 & 信任说明）</a></p>
