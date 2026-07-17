@@ -1,85 +1,28 @@
 # Security Policy
 
-UniClipboard is a security-oriented, end-to-end-encrypted clipboard sync tool.
-This document explains how to report vulnerabilities and how to verify the
-integrity and authenticity of the binaries we publish.
+OpenClipboard is a pre-production, security-focused cross-device clipboard project. It does **not** currently publish production-ready binaries. The imported mobile client still contains known plaintext credential, plaintext history, legacy HTTP Basic Auth, and dependency risks tracked in `docs/security/mobile-security-backlog.md`.
 
-## Supported Versions
+Do not use the current code or CI artifacts with real passwords, private clipboard data, or production infrastructure.
 
-UniClipboard is pre-1.0 and ships from a single active release line. Security
-fixes land on the latest released minor; older builds are not maintained.
-Please update to the latest release before reporting an issue.
+## Supported versions
 
-| Version         | Supported          |
-| --------------- | ------------------ |
-| Latest `0.14.x` | :white_check_mark: |
-| Older `0.x`     | :x:                |
+No version is currently supported for production use. This policy will be updated before the first security-reviewed release.
 
-## Reporting a Vulnerability
+| Version | Security support |
+| --- | --- |
+| `main` / CI artifacts | Development and testing only |
+| Imported upstream releases | Not supported by this repository |
 
-Please report security issues **privately** — do **not** open a public issue for
-an unfixed vulnerability.
+## Reporting a vulnerability
 
-- Preferred: open a private report through GitHub Security Advisories on this
-  repository (the **"Report a vulnerability"** button under the **Security**
-  tab). This keeps the disclosure private until a fix is available.
+Please do not open a public issue for an undisclosed vulnerability.
 
-We aim to acknowledge new reports within a few business days and will keep you
-updated through triage, the fix, and coordinated disclosure. Thank you for
-helping keep UniClipboard users safe.
+Use GitHub's private vulnerability reporting feature from this repository's **Security** tab. Include the affected commit, platform, reproduction steps, impact, and any suggested mitigation. If private reporting is not yet enabled, contact the repository owner privately and share only enough public information to establish contact.
 
-## Verifying Release Downloads
+We will acknowledge reports as capacity permits. No response-time or patch-time service level is promised before the first supported release.
 
-UniClipboard uses two **independent** signing mechanisms, both built on
-[minisign](https://jedisct1.github.io/minisign/)-compatible Ed25519 keys. The
-two keys are intentionally separate so they can be rotated independently.
+## Release trust
 
-### 1. In-app auto-updater (always on)
+This repository has not yet established its own release-signing keys, notarization identities, package signing, or reproducible release process. Keys and signatures from UniClipboard or UniClip upstream releases do not authenticate OpenClipboard artifacts.
 
-The Tauri auto-updater cryptographically verifies every update bundle it
-downloads against a public key embedded in the application. You do not need to
-do anything: an update whose signature is missing or invalid is rejected
-automatically.
-
-For reference, the updater public key is:
-
-```
-untrusted comment: minisign public key: B2680836865C2738
-RWQ4J1yGNghostY9tL54b8pVCWvFIc7ebO9iD11Hvf2fqcMYemYwtIWb
-```
-
-This key signs the **updater payloads only** — `*.app.tar.gz` (macOS),
-`*.AppImage.tar.gz` (Linux) and `*.nsis.zip` (Windows) — whose detached `*.sig`
-files are attached to every GitHub release. It is the same key shipped in the
-application configuration, so it is fully public.
-
-> On macOS, release builds are additionally Apple-notarized and code-signed, so
-> Gatekeeper (`spctl --assess --type execute`) validates the `.app` directly.
-
-### 2. Release artifacts (`SHA256SUMS`)
-
-Starting with the first signed release, every GitHub release includes:
-
-- `SHA256SUMS.txt` — SHA-256 checksums of every release artifact, and
-- `SHA256SUMS.txt.minisig` — a minisign signature over that checksum file.
-
-The release-artifact public key is:
-
-```
-untrusted comment: minisign public key: 0659AAD44E7EB54C
-RWRMtX5O1KpZBhZHfGaa4gqlbwnzJMINb65be0QNzl8RKwK7VOwkMvO8
-```
-
-To verify a download:
-
-```sh
-# 1. Authenticate the checksum list against the release key
-minisign -Vm SHA256SUMS.txt -P 'RWRMtX5O1KpZBhZHfGaa4gqlbwnzJMINb65be0QNzl8RKwK7VOwkMvO8'
-
-# 2. Check your download's integrity against the (now-trusted) list
-sha256sum --ignore-missing -c SHA256SUMS.txt          # Linux
-# macOS: brew install coreutils, then:
-# gsha256sum --ignore-missing -c SHA256SUMS.txt
-```
-
-If both checks pass, the file you downloaded is authentic and untampered.
+Before the first supported release, the project must publish its own signing and verification procedure and satisfy every release blocker in the mobile security backlog.

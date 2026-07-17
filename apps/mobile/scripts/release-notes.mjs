@@ -119,7 +119,9 @@ const androidText = androidNotes.join('\n') + '\n';
 const iosText = iosNotes.join('\n') + '\n';
 
 if (printOnly) {
-  process.stdout.write(`tag: ${tag}\n\n=== github.md ===\n${githubBody}\n=== testflight (iOS) ===\n${iosText}`);
+  process.stdout.write(
+    `tag: ${tag}\n\n=== github.md ===\n${githubBody}\n=== testflight (iOS) ===\n${iosText}`
+  );
   process.exit(0);
 }
 
@@ -133,5 +135,7 @@ for (const [name, content] of Object.entries(files)) {
   writeFileSync(resolve(outDir, name), content);
 }
 
-console.log(`release-notes for ${tag}: ${androidNotes.length} Android bullet(s), ${iosNotes.length} iOS bullet(s)`);
+console.log(
+  `release-notes for ${tag}: ${androidNotes.length} Android bullet(s), ${iosNotes.length} iOS bullet(s)`
+);
 console.log(`wrote ${Object.keys(files).join(', ')} to ${outDir}`);
