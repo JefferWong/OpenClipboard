@@ -11,11 +11,13 @@ public struct VaultCredential: Codable, Equatable, Sendable {
 public enum CredentialVaultError: Error, LocalizedError {
     case unexpectedStatus(OSStatus)
     case malformedCredential
+    case invalidAccessGroup
 
     public var errorDescription: String? {
         switch self {
         case .unexpectedStatus(let status): return "Keychain operation failed (\(status))"
         case .malformedCredential: return "Stored credential is malformed"
+        case .invalidAccessGroup: return "Keychain access group is not configured"
         }
     }
 }
@@ -80,10 +82,14 @@ public final class CredentialVault: @unchecked Sendable {
             kSecAttrService: service,
             kSecAttrAccount: reference,
         ]
-        if let group = Bundle.main.object(forInfoDictionaryKey: "UCKeychainAccessGroup") as? String,
-           !group.isEmpty {
-            query[kSecAttrAccessGroup] = group
+        guard let rawGroup = Bundle.main.object(forInfoDictionaryKey: "UCKeychainAccessGroup") as? String else {
+            throw CredentialVaultError.invalidAccessGroup
         }
+        let group = rawGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard group.range(of: #"^[A-Z0-9]{10}\.app\.uniclipboard\.UniClipboard(?:\.dev)?\.shared$"#, options: .regularExpression) != nil else {
+            throw CredentialVaultError.invalidAccessGroup
+        }
+        query[kSecAttrAccessGroup] = group
         return query
     }
 }

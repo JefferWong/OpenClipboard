@@ -28,7 +28,10 @@ class AppGroupStoreModule : Module() {
       val ref = reference?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
       val plaintext = JSONObject().put("username", username).put("password", password).toString()
       val encrypted = encrypt(plaintext.toByteArray(Charsets.UTF_8))
-      preferences().edit().putString(ref, encrypted).commit()
+      commitOrThrow(
+        preferences().edit().putString(ref, encrypted).commit(),
+        "putCredential"
+      )
       ref
     }
 
@@ -38,7 +41,7 @@ class AppGroupStoreModule : Module() {
     }
 
     AsyncFunction("deleteCredential") { reference: String ->
-      preferences().edit().remove(reference).commit()
+      commitOrThrow(preferences().edit().remove(reference).commit(), "deleteCredential")
       Unit
     }
   }
@@ -46,6 +49,12 @@ class AppGroupStoreModule : Module() {
   private fun preferences() = appContext.reactContext
     ?.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     ?: throw IllegalStateException("React context is unavailable")
+
+  private fun commitOrThrow(succeeded: Boolean, operation: String) {
+    if (!succeeded) {
+      throw IllegalStateException("Credential vault persistence failed during $operation")
+    }
+  }
 
   private fun encrypt(plaintext: ByteArray): String {
     val cipher = Cipher.getInstance(TRANSFORMATION)

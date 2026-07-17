@@ -42,7 +42,7 @@ const IOS_BUNDLE_ID = `app.uniclipboard.UniClipboard${ID_SUFFIX}`;
 const APP_GROUP = `group.app.uniclipboard.UniClipboard${ID_SUFFIX}`;
 // Provision this group for the app and both extensions. A missing entitlement
 // must fail Keychain access rather than falling back to App Group preferences.
-const KEYCHAIN_ACCESS_GROUP = '8XG39X5CL8.app.uniclipboard.UniClipboard.shared';
+const KEYCHAIN_ACCESS_GROUP = `8XG39X5CL8.app.uniclipboard.UniClipboard${ID_SUFFIX}.shared`;
 
 // The legacy group is a one-way migration source from the old native Swift
 // app; only the production install has data there, so keep it out of dev.
@@ -69,9 +69,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
       infoPlist: {
         ...(ios.infoPlist ?? {}),
-        // Read at runtime by the Swift App Group resolvers (with a hardcoded
-        // fallback). Injected for BOTH variants so production also resolves a
-        // concrete value rather than relying on the fallback.
+        // Read at runtime by the Swift App Group and Keychain resolvers.
         UCAppGroupIdentifier: APP_GROUP,
         UCKeychainAccessGroup: KEYCHAIN_ACCESS_GROUP,
       },
