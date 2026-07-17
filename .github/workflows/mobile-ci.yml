@@ -189,8 +189,8 @@ jobs:
         working-directory: apps/mobile
         run: |
           xcodebuild \
-            -workspace ios/UniClip.xcworkspace \
-            -scheme UniClip \
+            -workspace ios/UniClipDev.xcworkspace \
+            -scheme UniClipDev \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/openclipboard-derived-data" \
