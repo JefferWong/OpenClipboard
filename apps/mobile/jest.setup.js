@@ -35,7 +35,9 @@ jest.mock('expo-localization', () => ({
       currencySymbol: '¥',
     },
   ],
-  getCalendars: () => [{ calendar: 'gregory', timeZone: 'Asia/Shanghai', uses24hourClock: true, firstWeekday: 1 }],
+  getCalendars: () => [
+    { calendar: 'gregory', timeZone: 'Asia/Shanghai', uses24hourClock: true, firstWeekday: 1 },
+  ],
 }));
 
 jest.mock('react-native-logs', () => ({
@@ -58,7 +60,7 @@ jest.mock('expo-file-system', () => {
       this.parts = parts;
       this.name = String(parts[parts.length - 1] ?? '');
       this.uri = parts
-        .map((part) => (typeof part === 'string' ? part : part?.uri ?? ''))
+        .map((part) => (typeof part === 'string' ? part : (part?.uri ?? '')))
         .join('/')
         .replace(/\/+/g, '/')
         .replace('file:/', 'file://');
@@ -76,7 +78,7 @@ jest.mock('expo-file-system', () => {
       this.parts = parts;
       this.name = String(parts[parts.length - 1] ?? '');
       this.uri = parts
-        .map((part) => (typeof part === 'string' ? part : part?.uri ?? ''))
+        .map((part) => (typeof part === 'string' ? part : (part?.uri ?? '')))
         .join('/')
         .replace(/\/+/g, '/')
         .replace('file:/', 'file://');
