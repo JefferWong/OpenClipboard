@@ -12,6 +12,7 @@ import { migrateConfig, extractRuntimeState } from './ConfigMigration';
 import { runtimeStateStorage } from './RuntimeStateStorage';
 import { log } from './Logger';
 import { seedConfigFromAppGroup } from './appGroupSeed';
+import { deleteCredential, getCredential, putCredential } from 'app-group-store';
 
 /**
  * 配置存储服务
@@ -74,6 +75,11 @@ export class ConfigStorage {
       } else {
         this.config = { ...DEFAULT_SETTINGS, ...savedConfig };
       }
+      await this.hydrateCredentials();
+      // Re-saving after hydration performs the one-way legacy migration:
+      // plaintext credentials are lifted into the native vault and omitted
+      // from the AsyncStorage blob.
+      await this.saveConfig();
     } else {
       const seed = await seedConfigFromAppGroup();
       this.config = seed ? { ...DEFAULT_SETTINGS, ...seed } : { ...DEFAULT_SETTINGS };
@@ -91,7 +97,8 @@ export class ConfigStorage {
     }
 
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(this.config));
+      await this.ensureCredentialReferences();
+      await AsyncStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(this.redactedConfig()));
     } catch (error) {
       log.error('[ConfigStorage] Failed to save config:', error);
       throw error;
@@ -106,7 +113,7 @@ export class ConfigStorage {
       await this.initialize();
     }
 
-    return { ...this.config! };
+    return this.copyConfig(this.config!);
   }
 
   /**
@@ -126,6 +133,11 @@ export class ConfigStorage {
    * 重置配置为默认值
    */
   public async resetConfig(): Promise<void> {
+    if (this.config) {
+      await Promise.all(
+        this.config.servers.map((server) => deleteCredential(server.credentialRef))
+      );
+    }
     this.config = { ...DEFAULT_SETTINGS };
     await this.saveConfig();
     await AsyncStorage.setItem(CONFIG_USER_STATE_KEY, '1');
@@ -138,7 +150,10 @@ export class ConfigStorage {
    */
   public async getServers(): Promise<ServerConfig[]> {
     const config = await this.getConfig();
-    return [...config.servers];
+    return config.servers.map((server) => ({
+      ...server,
+      urls: server.urls ? [...server.urls] : undefined,
+    }));
   }
 
   /**
@@ -192,7 +207,8 @@ export class ConfigStorage {
       throw new Error(`Invalid server index: ${index}`);
     }
 
-    config.servers.splice(index, 1);
+    const [deleted] = config.servers.splice(index, 1);
+    await deleteCredential(deleted?.credentialRef);
 
     // 调整当前激活索引
     if (config.activeServerIndex === index) {
@@ -216,6 +232,78 @@ export class ConfigStorage {
 
     config.activeServerIndex = index;
     await this.updateConfig(config);
+  }
+
+  /**
+   * Credentials may exist in memory while an active sync operation runs, but
+   * the durable configuration contains only the opaque vault reference.
+   */
+  private async ensureCredentialReferences(): Promise<void> {
+    if (!this.config) return;
+
+    this.config.servers = await Promise.all(
+      this.config.servers.map(async (server) => {
+        const hasCredentialMaterial =
+          server.username !== undefined || server.password !== undefined;
+        if (!hasCredentialMaterial) {
+          // iOS extensions require a reference even for an explicitly
+          // unauthenticated SyncClipboard endpoint; store an empty credential
+          // in the vault instead of reviving the old App Group empty-string
+          // username/password fields.
+          if (server.type === 'syncclipboard' && !server.credentialRef) {
+            const credentialRef = await putCredential({ username: '', password: '' });
+            return { ...server, credentialRef };
+          }
+          return server;
+        }
+
+        const username = server.username ?? '';
+        const password = server.password ?? '';
+        if (!username && !password) {
+          await deleteCredential(server.credentialRef);
+          const { credentialRef: _credentialRef, ...withoutReference } = server;
+          if (server.type === 'syncclipboard') {
+            const credentialRef = await putCredential({ username: '', password: '' });
+            return { ...withoutReference, credentialRef };
+          }
+          return withoutReference;
+        }
+
+        const credentialRef = await putCredential({ username, password }, server.credentialRef);
+        return { ...server, credentialRef };
+      })
+    );
+  }
+
+  private async hydrateCredentials(): Promise<void> {
+    if (!this.config) return;
+
+    this.config.servers = await Promise.all(
+      this.config.servers.map(async (server) => {
+        if (!server.credentialRef) return server;
+        const credential = await getCredential(server.credentialRef);
+        return credential ? { ...server, ...credential } : server;
+      })
+    );
+  }
+
+  private redactedConfig(): AppSettings {
+    const config = this.copyConfig(this.config!);
+    config.servers = config.servers.map((server) => {
+      const { username: _username, password: _password, ...redacted } = server;
+      return redacted;
+    });
+    return config;
+  }
+
+  private copyConfig(config: AppSettings): AppSettings {
+    return {
+      ...config,
+      servers: config.servers.map((server) => ({
+        ...server,
+        urls: server.urls ? [...server.urls] : undefined,
+      })),
+    };
   }
 
   // ========== 主题管理 ==========

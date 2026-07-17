@@ -219,6 +219,11 @@ public final class SettingsStore: @unchecked Sendable {
         defaults.synchronize()
         if let data = defaults.data(forKey: AppSettings.PersistenceKey.serverConfigList) {
             if let list = try? decoder.decode(ServerConfigList.self, from: data) {
+                // `ServerConfig.init(from:)` may have lifted legacy username /
+                // password fields into Keychain. Always rewrite the decoded
+                // list so those source fields cannot remain in App Group
+                // preferences after the first successful read.
+                saveServers(list)
                 return list
             }
             // Corruption policy returns the empty default — but losing the
@@ -230,7 +235,10 @@ public final class SettingsStore: @unchecked Sendable {
 
         if let legacyData = defaults.data(forKey: AppSettings.PersistenceKey.legacyServerConfig),
            let legacy = try? decoder.decode(LegacyServerConfig.self, from: legacyData) {
-            let migrated = legacy.migrated()
+            guard let migrated = try? legacy.migrated() else {
+                log.error("loadServers: legacy credential migration to Keychain failed")
+                return .init()
+            }
             saveServers(migrated)
             defaults.removeObject(forKey: AppSettings.PersistenceKey.legacyServerConfig)
             log.info("loadServers: migrated legacy server_config to server_config_list (§5.5)")

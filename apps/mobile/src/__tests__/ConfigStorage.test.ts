@@ -28,6 +28,11 @@ jest.mock('react-native', () => {
 jest.mock('app-group-store', () => ({
   getServers: jest.fn().mockResolvedValue({ configs: [], activeConfigId: null }),
   getSettings: jest.fn().mockResolvedValue({}),
+  putCredential: jest
+    .fn()
+    .mockImplementation(({ username }) => Promise.resolve(`vault-${username}`)),
+  getCredential: jest.fn().mockResolvedValue(null),
+  deleteCredential: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../services/Logger', () => ({
@@ -39,7 +44,7 @@ jest.mock('../services/Logger', () => ({
   },
 }));
 
-import { getServers, getSettings } from 'app-group-store';
+import { getCredential, getServers, getSettings, putCredential } from 'app-group-store';
 
 interface TestableConfigStorage extends ConfigStorage {
   initialize(): Promise<void>;
@@ -56,6 +61,8 @@ describe('ConfigStorage', () => {
   const mockSetItem = AsyncStorage.setItem as jest.Mock;
   const mockGetServers = getServers as jest.Mock;
   const mockGetSettings = getSettings as jest.Mock;
+  const mockPutCredential = putCredential as jest.Mock;
+  const mockGetCredential = getCredential as jest.Mock;
 
   const getPrivate = (storage: TestableConfigStorage): ConfigStoragePrivate => {
     return storage as unknown as ConfigStoragePrivate;
@@ -67,8 +74,12 @@ describe('ConfigStorage', () => {
     mockSetItem.mockReset();
     mockGetServers.mockReset();
     mockGetSettings.mockReset();
+    mockPutCredential.mockReset();
+    mockGetCredential.mockReset();
     mockGetServers.mockResolvedValue({ configs: [], activeConfigId: null });
     mockGetSettings.mockResolvedValue({});
+    mockPutCredential.mockImplementation(({ username }) => Promise.resolve(`vault-${username}`));
+    mockGetCredential.mockResolvedValue(null);
     configStorage = ConfigStorage.getInstance() as TestableConfigStorage;
     const privateProps = getPrivate(configStorage);
     privateProps.initialized = false;
@@ -107,14 +118,12 @@ describe('ConfigStorage', () => {
             id: 'primary',
             name: 'Primary',
             urls: ['https://server.example.com', 'http://lan.local'],
-            username: 'alice',
-            password: 'secret',
+            credentialRef: 'vault-primary',
           },
           {
             id: 'secondary',
             urls: ['https://backup.example.com'],
-            username: 'bob',
-            password: 'backup',
+            credentialRef: 'vault-secondary',
           },
         ],
         activeConfigId: 'secondary',
@@ -132,6 +141,13 @@ describe('ConfigStorage', () => {
         downloadRelativePath: 'Downloads',
         logViewLevelFilter: 'warn',
       });
+      mockGetCredential.mockImplementation((reference: string) =>
+        Promise.resolve(
+          reference === 'vault-primary'
+            ? { username: 'alice', password: 'secret' }
+            : { username: 'bob', password: 'backup' }
+        )
+      );
 
       await configStorage.initialize();
 
@@ -144,15 +160,13 @@ describe('ConfigStorage', () => {
           name: 'Primary',
           url: 'https://server.example.com',
           urls: ['https://server.example.com', 'http://lan.local'],
-          username: 'alice',
-          password: 'secret',
+          credentialRef: 'vault-alice',
         },
         {
           type: 'syncclipboard',
           url: 'https://backup.example.com',
           urls: ['https://backup.example.com'],
-          username: 'bob',
-          password: 'backup',
+          credentialRef: 'vault-bob',
         },
       ]);
       expect(savedConfig.activeServerIndex).toBe(1);
@@ -167,6 +181,10 @@ describe('ConfigStorage', () => {
       expect(savedConfig.downloadRelativePath).toBe('Downloads');
       expect(savedConfig.logLevel).toBe('warn');
       expect(mockSetItem).not.toHaveBeenCalledWith(CONFIG_USER_STATE_KEY, '1');
+      expect(mockPutCredential).toHaveBeenCalledWith(
+        { username: 'alice', password: 'secret' },
+        'vault-primary'
+      );
     });
 
     it('should not reload if already initialized', async () => {
@@ -214,6 +232,39 @@ describe('ConfigStorage', () => {
       expect(mockSetItem).toHaveBeenCalled();
       expect(mockSetItem).toHaveBeenCalledWith(CONFIG_USER_STATE_KEY, '1');
     });
+  });
+
+  it('moves legacy plaintext credentials to the vault before rewriting configuration', async () => {
+    mockGetItem.mockImplementation((key: string) =>
+      Promise.resolve(
+        key === STORAGE_KEYS.CONFIG
+          ? JSON.stringify({
+              ...DEFAULT_SETTINGS,
+              servers: [
+                {
+                  type: 'syncclipboard',
+                  url: 'https://server.example.com',
+                  username: 'alice',
+                  password: 'secret',
+                },
+              ],
+              activeServerIndex: 0,
+            })
+          : null
+      )
+    );
+
+    await configStorage.initialize();
+
+    const stored = JSON.parse(
+      mockSetItem.mock.calls.find(([key]) => key === STORAGE_KEYS.CONFIG)?.[1]
+    );
+    expect(stored.servers[0]).toEqual({
+      type: 'syncclipboard',
+      url: 'https://server.example.com',
+      credentialRef: 'vault-alice',
+    });
+    expect(JSON.stringify(stored)).not.toContain('secret');
   });
 
   describe('resetConfig', () => {

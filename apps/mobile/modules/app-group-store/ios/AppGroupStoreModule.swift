@@ -20,6 +20,20 @@ public class AppGroupStoreModule: Module {
       return String(data: data, encoding: .utf8) ?? "{}"
     }
 
+    AsyncFunction("putCredential") { (reference: String?, username: String, password: String) throws -> String in
+      try CredentialVault.shared.put(reference: reference, username: username, password: password)
+    }
+
+    AsyncFunction("getCredential") { (reference: String) throws -> String? in
+      guard let credential = try CredentialVault.shared.get(reference: reference) else { return nil }
+      let data = try self.encoder.encode(credential)
+      return String(data: data, encoding: .utf8)
+    }
+
+    AsyncFunction("deleteCredential") { (reference: String) throws -> Void in
+      try CredentialVault.shared.delete(reference: reference)
+    }
+
     AsyncFunction("saveSettings") { (json: String) throws -> Void in
       let settings = try self.decoder.decode(AppSettings.self, from: Data(json.utf8))
       self.store.saveAppSettings(settings)

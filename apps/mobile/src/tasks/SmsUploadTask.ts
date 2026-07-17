@@ -4,10 +4,7 @@
  * 由 SmsHeadlessTaskService (Native) 启动，不依赖 React Native 主界面线程。
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { STORAGE_KEYS } from '../types/storage';
-import type { AppConfig } from '../types/storage';
 import type { ServerConfig, ProfileDto } from '../types/api';
 import { WebDAVClient } from '../services/WebDAVClient';
 import { S3Client } from '../services/S3Client';
@@ -16,6 +13,7 @@ import { sha256 } from 'js-sha256';
 import { createAPIClient as createRoutedAPIClient } from '../services/apiClientFactory';
 import { log } from '@/services/Logger';
 import i18n from '@/i18n';
+import { configStorage } from '../services/ConfigStorage';
 
 // 重试配置
 const MAX_RETRIES = 3;
@@ -40,13 +38,12 @@ export function extractVerificationCode(body: string): string | null {
 }
 
 /**
- * 从 AsyncStorage 加载应用配置
+ * 从 ConfigStorage 加载应用配置。ConfigStorage is the only path that
+ * rehydrates a runtime credential from the platform vault.
  */
-async function loadConfig(): Promise<AppConfig | null> {
+async function loadConfig() {
   try {
-    const json = await AsyncStorage.getItem(STORAGE_KEYS.CONFIG);
-    if (!json) return null;
-    return JSON.parse(json) as AppConfig;
+    return await configStorage.getConfig();
   } catch (e) {
     log.error('[SmsUploadTask] Failed to load config:', e);
     return null;
@@ -137,7 +134,9 @@ async function uploadWithRetry(
       if (attempt < MAX_RETRIES) {
         const delay = RETRY_DELAYS[attempt] ?? RETRY_DELAYS[RETRY_DELAYS.length - 1];
         log.warn(
-          `[SmsUploadTask] Upload failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}): ${error}, retrying in ${delay}ms`
+          `[SmsUploadTask] Upload failed (attempt ${attempt + 1}/${
+            MAX_RETRIES + 1
+          }): ${error}, retrying in ${delay}ms`
         );
         await updateNotification(
           i18n.t('share:sms.retrying', {

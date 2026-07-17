@@ -19,6 +19,9 @@ interface AppGroupStoreNativeModule {
   migrateLegacyContainer(): Promise<LegacyMigrationResult>;
   getKeyboardStatus(): Promise<NativeKeyboardStatus>;
   getPasteboardChangeCount(): number;
+  putCredential(reference: string | null, username: string, password: string): Promise<string>;
+  getCredential(reference: string): Promise<string | null>;
+  deleteCredential(reference: string): Promise<void>;
 }
 
 interface NativeKeyboardStatus {
@@ -33,6 +36,10 @@ export interface ServerConfigDTO {
   id: string;
   name?: string;
   urls: string[];
+  credentialRef?: string;
+}
+
+export interface CredentialDTO {
   username: string;
   password: string;
 }
@@ -95,6 +102,32 @@ export function saveServers(list: ServerConfigListDTO): Promise<void> {
 export async function getServers(): Promise<ServerConfigListDTO> {
   const json = await NativeModule?.getServers();
   return json ? (JSON.parse(json) as ServerConfigListDTO) : EMPTY_SERVERS;
+}
+
+/**
+ * Stores a credential in the platform-protected vault and returns its opaque
+ * reference. No JavaScript storage fallback is intentionally provided.
+ */
+export async function putCredential(
+  credential: CredentialDTO,
+  reference?: string
+): Promise<string> {
+  if (!NativeModule?.putCredential) {
+    throw new Error('Secure credential storage is unavailable in this build');
+  }
+  return NativeModule.putCredential(reference ?? null, credential.username, credential.password);
+}
+
+/** Returns a credential only for an active runtime operation or edit form. */
+export async function getCredential(reference?: string): Promise<CredentialDTO | null> {
+  if (!reference || !NativeModule?.getCredential) return null;
+  const json = await NativeModule.getCredential(reference);
+  return json ? (JSON.parse(json) as CredentialDTO) : null;
+}
+
+export async function deleteCredential(reference?: string): Promise<void> {
+  if (!reference || !NativeModule?.deleteCredential) return;
+  await NativeModule.deleteCredential(reference);
 }
 
 export function saveSettings(settings: AppSettingsDTO): Promise<void> {
