@@ -33,7 +33,7 @@ public final class CredentialVault: @unchecked Sendable {
         let requestedRef = reference?.trimmingCharacters(in: .whitespacesAndNewlines)
         let ref = (requestedRef?.isEmpty == false) ? requestedRef! : UUID().uuidString.lowercased()
         let data = try encoder.encode(VaultCredential(username: username, password: password))
-        var query = baseQuery(reference: ref)
+        var query = try baseQuery(reference: ref)
         let attributes: [CFString: Any] = [
             kSecValueData: data,
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
@@ -48,7 +48,7 @@ public final class CredentialVault: @unchecked Sendable {
     }
 
     public func get(reference: String) throws -> VaultCredential? {
-        var query = baseQuery(reference: reference)
+        var query = try baseQuery(reference: reference)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
         var result: CFTypeRef?
@@ -62,13 +62,13 @@ public final class CredentialVault: @unchecked Sendable {
     }
 
     public func delete(reference: String) throws {
-        let status = SecItemDelete(baseQuery(reference: reference) as CFDictionary)
+        let status = SecItemDelete(try baseQuery(reference: reference) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw CredentialVaultError.unexpectedStatus(status)
         }
     }
 
-    private func baseQuery(reference: String) -> [CFString: Any] {
+    private func baseQuery(reference: String) throws -> [CFString: Any] {
         var query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
