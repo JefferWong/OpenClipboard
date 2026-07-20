@@ -27,7 +27,7 @@ describe('security remediation source invariants', () => {
     expect(module).toContain('"deleteCredential"');
     expect(plugin).toContain('android:dataExtractionRules');
     expect(plugin).toContain('android:fullBackupContent');
-    expect(plugin).toContain('uniclipboard.credential-vault.v1');
+    expect(plugin).toContain('uniclipboard.credential-vault.v1.xml');
     expect(plugin).toContain('<data-extraction-rules>');
     expect(plugin).toContain('<full-backup-content>');
   });

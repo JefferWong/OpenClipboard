@@ -39,16 +39,16 @@ const path = __importStar(require("path"));
 const DATA_EXTRACTION_RULES = `<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
   <cloud-backup>
-    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1" />
+    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
   </cloud-backup>
   <device-transfer>
-    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1" />
+    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
   </device-transfer>
 </data-extraction-rules>
 `;
 const FULL_BACKUP_CONTENT = `<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-  <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1" />
+  <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
 </full-backup-content>
 `;
 /**

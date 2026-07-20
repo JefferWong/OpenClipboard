@@ -436,8 +436,8 @@ export class ConfigStorage {
    * 导出配置为 JSON
    */
   public async exportConfig(): Promise<string> {
-    const config = await this.getConfig();
-    return JSON.stringify(config, null, 2);
+    await this.getConfig();
+    return JSON.stringify(this.redactedConfig(), null, 2);
   }
 
   /**
@@ -451,8 +451,8 @@ export class ConfigStorage {
         throw new Error('Invalid config: missing servers array');
       }
 
-      this.config = migrateConfig(imported);
-      await this.persistConfig(this.config);
+      const importedConfig = migrateConfig(imported);
+      await this.persistConfig(importedConfig);
       await AsyncStorage.setItem(CONFIG_USER_STATE_KEY, '1');
     } catch (error) {
       log.error('[ConfigStorage] Failed to import config:', error);

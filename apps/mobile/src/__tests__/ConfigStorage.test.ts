@@ -214,15 +214,15 @@ describe('ConfigStorage', () => {
         ],
         activeServerIndex: 0,
       } as AppSettings;
-      mockGetItem.mockImplementation((key: string) =>
-        Promise.resolve(
-          key === STORAGE_KEYS.CONFIG
-            ? JSON.stringify(storedConfig)
-            : key === '@syncclipboard:schema_version'
-              ? '3'
-              : null
-        )
-      );
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
       mockGetCredential.mockResolvedValue({ username: 'alice', password: 'secret' });
 
       await configStorage.initialize();
@@ -254,6 +254,100 @@ describe('ConfigStorage', () => {
       const result2 = await configStorage.getConfig();
 
       expect(result2.syncMode).not.toBe(SyncMode.Auto);
+    });
+  });
+
+  describe('credential-safe import and export', () => {
+    it('redacts hydrated credentials from exported configuration', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://server.example.com',
+            credentialRef: 'vault-primary',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({
+        username: 'alice',
+        password: 'secret',
+      });
+
+      const exported = JSON.parse(await configStorage.exportConfig());
+
+      expect(exported.servers[0]).toEqual({
+        type: 'syncclipboard',
+        url: 'https://server.example.com',
+        credentialRef: 'vault-primary',
+      });
+      expect(JSON.stringify(exported)).not.toContain('alice');
+      expect(JSON.stringify(exported)).not.toContain('secret');
+    });
+
+    it('keeps the current config when imported config persistence fails', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://old.example.com',
+            credentialRef: 'vault-old',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({
+        username: 'old-user',
+        password: 'old-password',
+      });
+
+      await configStorage.initialize();
+      mockSetItem.mockRejectedValueOnce(new Error('storage unavailable'));
+
+      await expect(
+        configStorage.importConfig(
+          JSON.stringify({
+            ...DEFAULT_SETTINGS,
+            servers: [
+              {
+                type: 'syncclipboard',
+                url: 'https://new.example.com',
+                username: 'new-user',
+                password: 'new-password',
+              },
+            ],
+            activeServerIndex: 0,
+          })
+        )
+      ).rejects.toThrow('Invalid config JSON');
+
+      const servers = await configStorage.getServers();
+      expect(servers[0].url).toBe('https://old.example.com');
+      expect(servers[0].credentialRef).toBe('vault-old');
+      expect(mockDeleteCredential).not.toHaveBeenCalledWith('vault-old');
+      expect(mockDeleteCredential).toHaveBeenCalledWith('vault-new-user');
     });
   });
 
