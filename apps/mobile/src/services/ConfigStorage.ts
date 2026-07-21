@@ -69,11 +69,11 @@ export class ConfigStorage {
       const savedConfig = JSON.parse(configJson);
       const forceCredentialRefs = new Set<string>();
 
-      if (storedVersion < SETTINGS_SCHEMA_VERSION) {
+      const requiresSchemaUpgrade = storedVersion < SETTINGS_SCHEMA_VERSION;
+      if (requiresSchemaUpgrade) {
         const runtimeState = extractRuntimeState(savedConfig);
         await runtimeStateStorage.save(runtimeState);
         this.config = migrateConfig(savedConfig);
-        await AsyncStorage.setItem(SCHEMA_VERSION_KEY, String(SETTINGS_SCHEMA_VERSION));
       } else {
         this.config = { ...DEFAULT_SETTINGS, ...savedConfig };
       }
@@ -86,12 +86,17 @@ export class ConfigStorage {
         }
       }
       const requiresPersistence =
-        storedVersion < SETTINGS_SCHEMA_VERSION ||
+        requiresSchemaUpgrade ||
         forceCredentialRefs.size > 0 ||
         loadedConfig.servers.some(
           (server) => server.type === 'syncclipboard' && !server.credentialRef
         );
-      if (requiresPersistence) await this.persistConfig(loadedConfig, forceCredentialRefs);
+      if (requiresPersistence) {
+        await this.persistConfig(loadedConfig, forceCredentialRefs);
+        if (requiresSchemaUpgrade) {
+          await AsyncStorage.setItem(SCHEMA_VERSION_KEY, String(SETTINGS_SCHEMA_VERSION));
+        }
+      }
     } else {
       const seed = await seedConfigFromAppGroup();
       this.config = seed ? { ...DEFAULT_SETTINGS, ...seed } : { ...DEFAULT_SETTINGS };
@@ -307,7 +312,7 @@ export class ConfigStorage {
       forceCredentialRefs.has(server.credentialRef) ||
       (hasCredentialMaterial && !this.hydratedCredentialRefs.has(server.credentialRef));
 
-    if (hasCredentialMaterial && username && password && !mustWrite) return server;
+    if (hasCredentialMaterial && !mustWrite) return server;
 
     if (hasCredentialMaterial && !username && !password && server.type !== 'syncclipboard') {
       const withoutReference = { ...server };

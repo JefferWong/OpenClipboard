@@ -7,20 +7,23 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Must remain synchronized with AppGroupStoreModule.kt's PREFERENCES_NAME.
+const CREDENTIAL_PREFERENCES_FILE = 'uniclipboard.credential-vault.v1.xml';
+
 const DATA_EXTRACTION_RULES = `<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
   <cloud-backup>
-    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
+    <exclude domain="sharedpref" path="${CREDENTIAL_PREFERENCES_FILE}" />
   </cloud-backup>
   <device-transfer>
-    <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
+    <exclude domain="sharedpref" path="${CREDENTIAL_PREFERENCES_FILE}" />
   </device-transfer>
 </data-extraction-rules>
 `;
 
 const FULL_BACKUP_CONTENT = `<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-  <exclude domain="sharedpref" path="uniclipboard.credential-vault.v1.xml" />
+  <exclude domain="sharedpref" path="${CREDENTIAL_PREFERENCES_FILE}" />
 </full-backup-content>
 `;
 

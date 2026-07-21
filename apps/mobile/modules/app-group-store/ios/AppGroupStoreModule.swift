@@ -16,7 +16,8 @@ public class AppGroupStoreModule: Module {
     }
 
     AsyncFunction("getServers") { () throws -> String in
-      let data = try self.encoder.encode(self.store.loadServers())
+      let list = try self.store.loadServers()
+      let data = try self.encoder.encode(list)
       return String(data: data, encoding: .utf8) ?? "{}"
     }
 

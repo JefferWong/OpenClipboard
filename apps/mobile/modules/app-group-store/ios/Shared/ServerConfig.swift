@@ -83,13 +83,17 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
             // One-way migration of legacy App Group data. Decode the old
             // fields only long enough to move them to Keychain; encode(to:)
             // below intentionally never writes them again.
-            let username = try c.decode(String.self, forKey: .username)
-            let password = try c.decode(String.self, forKey: .password)
-            credentialRef = try CredentialVault.shared.put(
-                reference: nil,
-                username: username,
-                password: password
-            )
+            let username = try c.decodeIfPresent(String.self, forKey: .username)
+            let password = try c.decodeIfPresent(String.self, forKey: .password)
+            if username != nil || password != nil {
+                credentialRef = try CredentialVault.shared.put(
+                    reference: nil,
+                    username: username ?? "",
+                    password: password ?? ""
+                )
+            } else {
+                credentialRef = ""
+            }
         }
         // `urls` is the source of truth when present and non-empty. Older data
         // (and the wire payload's `skip_serializing_if = Vec::is_empty` case)

@@ -215,30 +215,24 @@ public final class SettingsStore: @unchecked Sendable {
 
     /// Load the server list, performing one-shot legacy migration (§5.5)
     /// if `server_config_list` is absent and `server_config` is present.
-    public func loadServers() -> ServerConfigList {
+    public func loadServers() throws -> ServerConfigList {
         defaults.synchronize()
         if let data = defaults.data(forKey: AppSettings.PersistenceKey.serverConfigList) {
-            if let list = try? decoder.decode(ServerConfigList.self, from: data) {
-                // `ServerConfig.init(from:)` may have lifted legacy username /
-                // password fields into Keychain. Always rewrite the decoded
-                // list so those source fields cannot remain in App Group
-                // preferences after the first successful read.
+            let list = try decoder.decode(ServerConfigList.self, from: data)
+
+            // ServerConfig.init(from:) migrates legacy plaintext into Keychain.
+            // Rewrite only when legacy fields were actually present.
+            let rawConfig = String(data: data, encoding: .utf8)
+            if rawConfig?.contains("\"username\"") == true ||
+                rawConfig?.contains("\"password\"") == true {
                 saveServers(list)
-                return list
             }
-            // Corruption policy returns the empty default — but losing the
-            // whole server list is the worst silent failure this store can
-            // produce, so leave a loud trace.
-            log.fault("loadServers: server_config_list blob (\(data.count, privacy: .public) bytes) failed to decode — returning empty list")
-            return ServerConfigList()
+            return list
         }
 
-        if let legacyData = defaults.data(forKey: AppSettings.PersistenceKey.legacyServerConfig),
-           let legacy = try? decoder.decode(LegacyServerConfig.self, from: legacyData) {
-            guard let migrated = try? legacy.migrated() else {
-                log.error("loadServers: legacy credential migration to Keychain failed")
-                return .init()
-            }
+        if let legacyData = defaults.data(forKey: AppSettings.PersistenceKey.legacyServerConfig) {
+            let legacy = try decoder.decode(LegacyServerConfig.self, from: legacyData)
+            let migrated = try legacy.migrated()
             saveServers(migrated)
             defaults.removeObject(forKey: AppSettings.PersistenceKey.legacyServerConfig)
             log.info("loadServers: migrated legacy server_config to server_config_list (§5.5)")

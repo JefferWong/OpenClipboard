@@ -274,7 +274,14 @@ struct ShareRootView: View {
 
     private func loadEverything() async {
         let store = SettingsStore()
-        let loadedServers = store.loadServers()
+        let loadedServers: ServerConfigList
+        do {
+            loadedServers = try store.loadServers()
+        } catch {
+            log.error("loadEverything: failed to load server configuration: \(String(describing: error), privacy: .public)")
+            phase = .failed((error as? LocalizedError)?.errorDescription ?? "\(error)")
+            return
+        }
         let loadedSettings = store.loadAppSettings()
         servers = loadedServers
         trustInsecureCert = loadedSettings.trustInsecureCert

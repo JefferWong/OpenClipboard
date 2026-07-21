@@ -230,6 +230,72 @@ describe('ConfigStorage', () => {
       expect(mockPutCredential).not.toHaveBeenCalled();
       expect(mockSetItem).not.toHaveBeenCalledWith(STORAGE_KEYS.CONFIG, expect.any(String));
     });
+    it('does not advance schema version when migrated config persistence fails', async () => {
+      const legacyConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://legacy.example.com',
+            username: 'legacy-user',
+            password: 'legacy-password',
+          },
+        ],
+        activeServerIndex: 0,
+      };
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(legacyConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('1');
+        }
+        return Promise.resolve(null);
+      });
+      mockSetItem.mockImplementation((key: string) =>
+        key === STORAGE_KEYS.CONFIG
+          ? Promise.reject(new Error('storage unavailable'))
+          : Promise.resolve()
+      );
+
+      await configStorage.initialize();
+
+      expect(mockSetItem).not.toHaveBeenCalledWith('@syncclipboard:schema_version', String(3));
+    });
+
+    it('does not rewrite unchanged hydrated empty credentials', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://no-auth.example.com',
+            credentialRef: 'vault-empty-credentials',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({ username: '', password: '' });
+      mockSetItem.mockResolvedValue(undefined);
+
+      await configStorage.initialize();
+      mockPutCredential.mockClear();
+
+      await configStorage.updateConfig({ syncMode: SyncMode.Auto });
+
+      expect(mockPutCredential).not.toHaveBeenCalled();
+    });
   });
 
   describe('getConfig', () => {
