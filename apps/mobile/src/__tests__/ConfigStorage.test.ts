@@ -28,6 +28,11 @@ jest.mock('react-native', () => {
 jest.mock('app-group-store', () => ({
   getServers: jest.fn().mockResolvedValue({ configs: [], activeConfigId: null }),
   getSettings: jest.fn().mockResolvedValue({}),
+  putCredential: jest
+    .fn()
+    .mockImplementation(({ username }) => Promise.resolve(`vault-${username}`)),
+  getCredential: jest.fn().mockResolvedValue(null),
+  deleteCredential: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../services/Logger', () => ({
@@ -39,7 +44,13 @@ jest.mock('../services/Logger', () => ({
   },
 }));
 
-import { getServers, getSettings } from 'app-group-store';
+import {
+  deleteCredential,
+  getCredential,
+  getServers,
+  getSettings,
+  putCredential,
+} from 'app-group-store';
 
 interface TestableConfigStorage extends ConfigStorage {
   initialize(): Promise<void>;
@@ -56,6 +67,9 @@ describe('ConfigStorage', () => {
   const mockSetItem = AsyncStorage.setItem as jest.Mock;
   const mockGetServers = getServers as jest.Mock;
   const mockGetSettings = getSettings as jest.Mock;
+  const mockPutCredential = putCredential as jest.Mock;
+  const mockGetCredential = getCredential as jest.Mock;
+  const mockDeleteCredential = deleteCredential as jest.Mock;
 
   const getPrivate = (storage: TestableConfigStorage): ConfigStoragePrivate => {
     return storage as unknown as ConfigStoragePrivate;
@@ -67,8 +81,14 @@ describe('ConfigStorage', () => {
     mockSetItem.mockReset();
     mockGetServers.mockReset();
     mockGetSettings.mockReset();
+    mockPutCredential.mockReset();
+    mockGetCredential.mockReset();
+    mockDeleteCredential.mockReset();
     mockGetServers.mockResolvedValue({ configs: [], activeConfigId: null });
     mockGetSettings.mockResolvedValue({});
+    mockPutCredential.mockImplementation(({ username }) => Promise.resolve(`vault-${username}`));
+    mockGetCredential.mockResolvedValue(null);
+    mockDeleteCredential.mockResolvedValue(undefined);
     configStorage = ConfigStorage.getInstance() as TestableConfigStorage;
     const privateProps = getPrivate(configStorage);
     privateProps.initialized = false;
@@ -107,14 +127,12 @@ describe('ConfigStorage', () => {
             id: 'primary',
             name: 'Primary',
             urls: ['https://server.example.com', 'http://lan.local'],
-            username: 'alice',
-            password: 'secret',
+            credentialRef: 'vault-primary',
           },
           {
             id: 'secondary',
             urls: ['https://backup.example.com'],
-            username: 'bob',
-            password: 'backup',
+            credentialRef: 'vault-secondary',
           },
         ],
         activeConfigId: 'secondary',
@@ -132,6 +150,13 @@ describe('ConfigStorage', () => {
         downloadRelativePath: 'Downloads',
         logViewLevelFilter: 'warn',
       });
+      mockGetCredential.mockImplementation((reference: string) =>
+        Promise.resolve(
+          reference === 'vault-primary'
+            ? { username: 'alice', password: 'secret' }
+            : { username: 'bob', password: 'backup' }
+        )
+      );
 
       await configStorage.initialize();
 
@@ -144,15 +169,13 @@ describe('ConfigStorage', () => {
           name: 'Primary',
           url: 'https://server.example.com',
           urls: ['https://server.example.com', 'http://lan.local'],
-          username: 'alice',
-          password: 'secret',
+          credentialRef: 'vault-primary',
         },
         {
           type: 'syncclipboard',
           url: 'https://backup.example.com',
           urls: ['https://backup.example.com'],
-          username: 'bob',
-          password: 'backup',
+          credentialRef: 'vault-secondary',
         },
       ]);
       expect(savedConfig.activeServerIndex).toBe(1);
@@ -167,6 +190,7 @@ describe('ConfigStorage', () => {
       expect(savedConfig.downloadRelativePath).toBe('Downloads');
       expect(savedConfig.logLevel).toBe('warn');
       expect(mockSetItem).not.toHaveBeenCalledWith(CONFIG_USER_STATE_KEY, '1');
+      expect(mockPutCredential).not.toHaveBeenCalled();
     });
 
     it('should not reload if already initialized', async () => {
@@ -176,6 +200,101 @@ describe('ConfigStorage', () => {
       await configStorage.initialize();
 
       expect(mockGetItem).not.toHaveBeenCalled();
+    });
+
+    it('does not rewrite hydrated credentials on every initialization', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://server.example.com',
+            credentialRef: 'vault-primary',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({ username: 'alice', password: 'secret' });
+
+      await configStorage.initialize();
+
+      expect(mockPutCredential).not.toHaveBeenCalled();
+      expect(mockSetItem).not.toHaveBeenCalledWith(STORAGE_KEYS.CONFIG, expect.any(String));
+    });
+    it('does not advance schema version when migrated config persistence fails', async () => {
+      const legacyConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://legacy.example.com',
+            username: 'legacy-user',
+            password: 'legacy-password',
+          },
+        ],
+        activeServerIndex: 0,
+      };
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(legacyConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('1');
+        }
+        return Promise.resolve(null);
+      });
+      mockSetItem.mockImplementation((key: string) =>
+        key === STORAGE_KEYS.CONFIG
+          ? Promise.reject(new Error('storage unavailable'))
+          : Promise.resolve()
+      );
+
+      await configStorage.initialize();
+
+      expect(mockSetItem).not.toHaveBeenCalledWith('@syncclipboard:schema_version', String(3));
+    });
+
+    it('does not rewrite unchanged hydrated empty credentials', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://no-auth.example.com',
+            credentialRef: 'vault-empty-credentials',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({ username: '', password: '' });
+      mockSetItem.mockResolvedValue(undefined);
+
+      await configStorage.initialize();
+      mockPutCredential.mockClear();
+
+      await configStorage.updateConfig({ syncMode: SyncMode.Auto });
+
+      expect(mockPutCredential).not.toHaveBeenCalled();
     });
   });
 
@@ -204,6 +323,100 @@ describe('ConfigStorage', () => {
     });
   });
 
+  describe('credential-safe import and export', () => {
+    it('redacts hydrated credentials from exported configuration', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://server.example.com',
+            credentialRef: 'vault-primary',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({
+        username: 'alice',
+        password: 'secret',
+      });
+
+      const exported = JSON.parse(await configStorage.exportConfig());
+
+      expect(exported.servers[0]).toEqual({
+        type: 'syncclipboard',
+        url: 'https://server.example.com',
+        credentialRef: 'vault-primary',
+      });
+      expect(JSON.stringify(exported)).not.toContain('alice');
+      expect(JSON.stringify(exported)).not.toContain('secret');
+    });
+
+    it('keeps the current config when imported config persistence fails', async () => {
+      const storedConfig = {
+        ...DEFAULT_SETTINGS,
+        servers: [
+          {
+            type: 'syncclipboard',
+            url: 'https://old.example.com',
+            credentialRef: 'vault-old',
+          },
+        ],
+        activeServerIndex: 0,
+      } as AppSettings;
+
+      mockGetItem.mockImplementation((key: string) => {
+        if (key === STORAGE_KEYS.CONFIG) {
+          return Promise.resolve(JSON.stringify(storedConfig));
+        }
+        if (key === '@syncclipboard:schema_version') {
+          return Promise.resolve('3');
+        }
+        return Promise.resolve(null);
+      });
+      mockGetCredential.mockResolvedValue({
+        username: 'old-user',
+        password: 'old-password',
+      });
+
+      await configStorage.initialize();
+      mockSetItem.mockRejectedValueOnce(new Error('storage unavailable'));
+
+      await expect(
+        configStorage.importConfig(
+          JSON.stringify({
+            ...DEFAULT_SETTINGS,
+            servers: [
+              {
+                type: 'syncclipboard',
+                url: 'https://new.example.com',
+                username: 'new-user',
+                password: 'new-password',
+              },
+            ],
+            activeServerIndex: 0,
+          })
+        )
+      ).rejects.toThrow('Invalid config JSON');
+
+      const servers = await configStorage.getServers();
+      expect(servers[0].url).toBe('https://old.example.com');
+      expect(servers[0].credentialRef).toBe('vault-old');
+      expect(mockDeleteCredential).not.toHaveBeenCalledWith('vault-old');
+      expect(mockDeleteCredential).toHaveBeenCalledWith('vault-new-user');
+    });
+  });
+
   describe('updateConfig', () => {
     it('should update config and save', async () => {
       mockGetItem.mockResolvedValue(JSON.stringify(DEFAULT_SETTINGS));
@@ -214,6 +427,39 @@ describe('ConfigStorage', () => {
       expect(mockSetItem).toHaveBeenCalled();
       expect(mockSetItem).toHaveBeenCalledWith(CONFIG_USER_STATE_KEY, '1');
     });
+  });
+
+  it('moves legacy plaintext credentials to the vault before rewriting configuration', async () => {
+    mockGetItem.mockImplementation((key: string) =>
+      Promise.resolve(
+        key === STORAGE_KEYS.CONFIG
+          ? JSON.stringify({
+              ...DEFAULT_SETTINGS,
+              servers: [
+                {
+                  type: 'syncclipboard',
+                  url: 'https://server.example.com',
+                  username: 'alice',
+                  password: 'secret',
+                },
+              ],
+              activeServerIndex: 0,
+            })
+          : null
+      )
+    );
+
+    await configStorage.initialize();
+
+    const stored = JSON.parse(
+      mockSetItem.mock.calls.find(([key]) => key === STORAGE_KEYS.CONFIG)?.[1]
+    );
+    expect(stored.servers[0]).toEqual({
+      type: 'syncclipboard',
+      url: 'https://server.example.com',
+      credentialRef: 'vault-alice',
+    });
+    expect(JSON.stringify(stored)).not.toContain('secret');
   });
 
   describe('resetConfig', () => {
@@ -347,6 +593,42 @@ describe('ConfigStorage', () => {
       it('should throw error for invalid index', async () => {
         await expect(configStorage.deleteServer(99)).rejects.toThrow('Invalid server index');
       });
+
+      it('keeps the old configuration and credential when config persistence fails', async () => {
+        const privateProps = getPrivate(configStorage);
+        privateProps.config!.servers[0].credentialRef = 'vault-primary';
+        mockSetItem.mockRejectedValue(new Error('storage unavailable'));
+
+        await expect(configStorage.deleteServer(0)).rejects.toThrow('storage unavailable');
+
+        expect((await configStorage.getServers())[0].credentialRef).toBe('vault-primary');
+        expect(mockDeleteCredential).not.toHaveBeenCalled();
+      });
+    });
+
+    it('cleans up a newly created credential when config persistence fails', async () => {
+      const privateProps = getPrivate(configStorage);
+      privateProps.config!.servers[0].credentialRef = 'vault-primary';
+      mockPutCredential.mockResolvedValue('vault-new');
+      mockSetItem.mockRejectedValue(new Error('storage unavailable'));
+
+      await expect(
+        configStorage.updateServer(0, { username: 'new-user', password: 'new-password' })
+      ).rejects.toThrow('storage unavailable');
+
+      expect(mockDeleteCredential).toHaveBeenCalledWith('vault-new');
+      expect((await configStorage.getServers())[0].credentialRef).toBe('vault-primary');
+    });
+
+    it('does not write config when the vault write fails', async () => {
+      mockPutCredential.mockRejectedValue(new Error('vault unavailable'));
+      mockSetItem.mockClear();
+
+      await expect(
+        configStorage.updateServer(0, { username: 'new-user', password: 'new-password' })
+      ).rejects.toThrow('vault unavailable');
+
+      expect(mockSetItem).not.toHaveBeenCalledWith(STORAGE_KEYS.CONFIG, expect.any(String));
     });
 
     describe('setActiveServer', () => {

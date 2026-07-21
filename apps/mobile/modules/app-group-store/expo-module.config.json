@@ -1,7 +1,10 @@
 {
-  "platforms": ["ios"],
+  "platforms": ["ios", "android"],
   "name": "app-group-store",
   "ios": {
     "modules": ["AppGroupStoreModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.appgroupstore.AppGroupStoreModule"]
   }
 }

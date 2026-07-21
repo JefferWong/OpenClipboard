@@ -48,6 +48,7 @@ describe('App Group sync mapping', () => {
             urls: [' HTTPS://EXAMPLE.COM:8443/base/// ', '', 'http://lan.local/'],
             username: 'alice',
             password: 'secret',
+            credentialRef: 'vault-primary',
           },
           {
             type: 'webdav',
@@ -69,15 +70,14 @@ describe('App Group sync mapping', () => {
             id: 'https://example.com:8443/base',
             name: 'Primary',
             urls: ['https://example.com:8443/base', 'http://lan.local'],
-            username: 'alice',
-            password: 'secret',
+            credentialRef: 'vault-primary',
           },
         ],
         activeConfigId: 'https://example.com:8443/base',
       });
     });
 
-    it('falls back from urls to url, drops empties, and coerces absent credentials to empty strings', () => {
+    it('falls back from urls to url, drops empties, and never writes empty credentials', () => {
       const result = mapServersToAppGroupDTO(
         [
           {
@@ -93,12 +93,12 @@ describe('App Group sync mapping', () => {
           {
             id: 'http://server.local',
             urls: ['http://server.local'],
-            username: '',
-            password: '',
           },
         ],
         activeConfigId: 'http://server.local',
       });
+      expect(JSON.stringify(result)).not.toContain('password');
+      expect(JSON.stringify(result)).not.toContain('username');
     });
 
     it('maps the RN active server index to the filtered active config id', () => {

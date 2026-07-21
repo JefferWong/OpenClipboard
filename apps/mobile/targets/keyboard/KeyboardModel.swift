@@ -342,18 +342,39 @@ final class KeyboardModel: ObservableObject {
     /// Read on demand (the store isn't observable); the overlay captures
     /// the result when it opens.
     func serverChoices() -> (servers: [ServerConfig], activeId: String?) {
-        let list = store.loadServers()
-        return (list.configs, list.activeConfig?.id)
+        do {
+            let list = try store.loadServers()
+            return (list.configs, list.activeConfig?.id)
+        } catch {
+            log.error("serverChoices: failed to load servers — \(String(describing: error))")
+            lastError = Self.message(for: error)
+            return ([], nil)
+        }
     }
 
     /// Make `id` the active server (writes `activeConfigId` to the App Group,
     /// same as the app's `setActiveServer`) and re-sync against it. The app
     /// picks the change up on its next foreground read.
     func setActiveServer(_ id: String) {
-        var list = store.loadServers()
+        var list: ServerConfigList
+        do {
+            list = try store.loadServers()
+        } catch {
+            log.error("setActiveServer: failed to load servers — \(String(describing: error))")
+            lastError = Self.message(for: error)
+            flashSync(.failure)
+            return
+        }
         guard list.activeConfigId != id, list.configs.contains(where: { $0.id == id }) else { return }
         list.activeConfigId = id
-        store.saveServers(list)
+        do {
+            try store.saveServers(list)
+        } catch {
+            log.error("setActiveServer: failed to save servers — \(String(describing: error))")
+            lastError = Self.message(for: error)
+            flashSync(.failure)
+            return
+        }
         serverLabel = list.activeConfig?.displayLabel ?? ""
         refresh(force: true)
     }
@@ -379,7 +400,17 @@ final class KeyboardModel: ObservableObject {
     // MARK: - Sync
 
     private func sync(force: Bool, gen: Int) async {
-        let servers = store.loadServers()
+        let servers: ServerConfigList
+        do {
+            servers = try store.loadServers()
+        } catch {
+            guard gen == syncGeneration else { return }
+            log.error("sync: failed to load servers — \(String(describing: error))")
+            lastError = Self.message(for: error)
+            flashSync(.failure)
+            isSyncing = false
+            return
+        }
         let settings = store.loadAppSettings()
         soundFeedback = settings.keyboardSoundFeedback
         hapticFeedback = settings.keyboardHapticFeedback

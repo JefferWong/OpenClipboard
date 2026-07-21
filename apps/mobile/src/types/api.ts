@@ -47,10 +47,20 @@ export interface ServerConfig {
   /** 候选地址列表（局域网 / Tailscale / 公网），按用户排列顺序 */
   urls?: string[];
 
-  /** 用户名（S3 时为 Access Key ID） */
+  /**
+   * Opaque identifier for credentials held by the platform credential vault.
+   * This is the only credential-related field that may be persisted in
+   * AsyncStorage, App Group preferences, exports, or diagnostics.
+   */
+  credentialRef?: string;
+
+  /**
+   * Runtime-only username (S3 时为 Access Key ID). ConfigStorage removes it
+   * before persisting configuration and restores it only from the native vault.
+   */
   username?: string;
 
-  /** 密码（S3 时为 Secret Access Key） */
+  /** Runtime-only password (S3 时为 Secret Access Key); never persist it. */
   password?: string;
 
   /** S3 区域（仅 S3 类型） */

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { getServers, getSettings } from 'app-group-store';
+import { getCredential, getServers, getSettings } from 'app-group-store';
 import type { ServerConfig } from '../types/api';
 import type { AppSettings } from '../types/settings';
 
@@ -11,14 +11,19 @@ export async function seedConfigFromAppGroup(): Promise<Partial<AppSettings> | n
   const [serverList, settings] = await Promise.all([getServers(), getSettings()]);
   if (!serverList.configs.length) return null;
 
-  const servers: ServerConfig[] = serverList.configs.map((config) => ({
-    type: 'syncclipboard',
-    ...(config.name ? { name: config.name } : {}),
-    url: config.urls[0] ?? '',
-    urls: config.urls,
-    username: config.username,
-    password: config.password,
-  }));
+  const servers: ServerConfig[] = await Promise.all(
+    serverList.configs.map(async (config) => {
+      const credential = await getCredential(config.credentialRef);
+      return {
+        type: 'syncclipboard',
+        ...(config.name ? { name: config.name } : {}),
+        url: config.urls[0] ?? '',
+        urls: config.urls,
+        ...(config.credentialRef ? { credentialRef: config.credentialRef } : {}),
+        ...(credential ?? {}),
+      };
+    })
+  );
 
   const activeIndex = serverList.activeConfigId
     ? serverList.configs.findIndex((config) => config.id === serverList.activeConfigId)

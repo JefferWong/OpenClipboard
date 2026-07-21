@@ -12,12 +12,16 @@
       "supportsTablet": true,
       "appleTeamId": "8XG39X5CL8",
       "bundleIdentifier": "app.uniclipboard.UniClipboard",
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UCKeychainAccessGroup": "8XG39X5CL8.app.uniclipboard.UniClipboard.shared"
+      },
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.app.uniclipboard.UniClipboard",
           "group.app.uniclipboard.ios"
-        ]
+        ],
+        "keychain-access-groups": ["8XG39X5CL8.app.uniclipboard.UniClipboard.shared"]
       }
     },
     "android": {
@@ -36,6 +40,7 @@
     "plugins": [
       "./plugins/build/withNativeLogger.js",
       "./plugins/build/withNetworkSecurityConfig.js",
+      "./plugins/build/withSecureCredentialBackupPolicy.js",
       "./plugins/build/withQuickSettingsTileManifest.js",
       "./plugins/build/withProcessTextManifest.js",
       "./plugins/build/withQuickActionActivity.js",
@@ -72,7 +77,11 @@
                     "com.apple.security.application-groups": [
                       "group.app.uniclipboard.UniClipboard",
                       "group.app.uniclipboard.ios"
-                    ]
+                    ],
+                    "keychain-access-groups": ["8XG39X5CL8.app.uniclipboard.UniClipboard.shared"]
+                  },
+                  "infoPlist": {
+                    "UCKeychainAccessGroup": "8XG39X5CL8.app.uniclipboard.UniClipboard.shared"
                   }
                 },
                 {
@@ -82,7 +91,11 @@
                     "com.apple.security.application-groups": [
                       "group.app.uniclipboard.UniClipboard",
                       "group.app.uniclipboard.ios"
-                    ]
+                    ],
+                    "keychain-access-groups": ["8XG39X5CL8.app.uniclipboard.UniClipboard.shared"]
+                  },
+                  "infoPlist": {
+                    "UCKeychainAccessGroup": "8XG39X5CL8.app.uniclipboard.UniClipboard.shared"
                   }
                 }
               ]

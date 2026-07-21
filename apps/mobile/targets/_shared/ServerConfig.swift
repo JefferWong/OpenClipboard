@@ -30,8 +30,9 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
     /// `url` throws. `urls[0]` is the canonical default and equals the legacy
     /// `url` field old clients read.
     public var urls: [String]
-    public var username: String
-    public var password: String
+    /// Opaque Keychain reference. The credential itself is never encoded into
+    /// the App Group config blob.
+    public var credentialRef: String
 
     /// Back-compat accessor == `urls[0]`. Most call sites (the client
     /// builder, the connection tester) take a single URL; they read this.
@@ -43,14 +44,12 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
         id: String,
         name: String? = nil,
         urls: [String],
-        username: String,
-        password: String
+        credentialRef: String
     ) {
         self.id = id
         self.name = name
         self.urls = urls
-        self.username = username
-        self.password = password
+        self.credentialRef = credentialRef
     }
 
     /// Single-URL convenience — the common case for hand-built configs,
@@ -60,14 +59,13 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
         id: String,
         name: String? = nil,
         url: String,
-        username: String,
-        password: String
+        credentialRef: String
     ) {
-        self.init(id: id, name: name, urls: [url], username: username, password: password)
+        self.init(id: id, name: name, urls: [url], credentialRef: credentialRef)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, url, urls, username, password
+        case id, name, url, urls, credentialRef, username, password
         // Decoded-and-dropped: the pre-multi-URL model persisted a per-config
         // auto-switch strategy + SSID list here. Auto-switch is now between a
         // profile's URLs, not between profiles, so these keys are ignored on
@@ -79,8 +77,24 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id       = try c.decode(String.self, forKey: .id)
         name     = try c.decodeIfPresent(String.self, forKey: .name)
-        username = try c.decode(String.self, forKey: .username)
-        password = try c.decode(String.self, forKey: .password)
+        if let reference = try c.decodeIfPresent(String.self, forKey: .credentialRef), !reference.isEmpty {
+            credentialRef = reference
+        } else {
+            // One-way migration of legacy App Group data. Decode the old
+            // fields only long enough to move them to Keychain; encode(to:)
+            // below intentionally never writes them again.
+            let username = try c.decodeIfPresent(String.self, forKey: .username)
+            let password = try c.decodeIfPresent(String.self, forKey: .password)
+            if username != nil || password != nil {
+                credentialRef = try CredentialVault.shared.put(
+                    reference: nil,
+                    username: username ?? "",
+                    password: password ?? ""
+                )
+            } else {
+                credentialRef = ""
+            }
+        }
         // `urls` is the source of truth when present and non-empty. Older data
         // (and the wire payload's `skip_serializing_if = Vec::is_empty` case)
         // omits it, so fall back to the legacy single `url` (== urls[0]). At
@@ -111,8 +125,7 @@ public struct ServerConfig: Codable, Equatable, Hashable, Identifiable, Sendable
         // payload, where `url` and `urls[0]` are kept identical on purpose.
         try c.encode(url, forKey: .url)
         try c.encode(urls, forKey: .urls)
-        try c.encode(username, forKey: .username)
-        try c.encode(password, forKey: .password)
+        try c.encode(credentialRef, forKey: .credentialRef)
     }
 
     /// §5.1 — fall back to the canonical URL when name is nil/empty/whitespace.
@@ -325,13 +338,16 @@ public struct LegacyServerConfig: Codable, Equatable, Sendable {
 
     /// §5.5 — wrap into a ServerConfigList with a fresh UUID v4 and mark active.
     /// The single legacy `url` becomes the one-element `urls` candidate list.
-    public func migrated(idProvider: () -> String = { UUID().uuidString.lowercased() }) -> ServerConfigList {
+    public func migrated(idProvider: () -> String = { UUID().uuidString.lowercased() }) throws -> ServerConfigList {
         let cfg = ServerConfig(
             id: idProvider(),
             name: nil,
             urls: [url],
-            username: username,
-            password: password
+            credentialRef: try CredentialVault.shared.put(
+                reference: nil,
+                username: username,
+                password: password
+            )
         )
         return ServerConfigList(configs: [cfg], activeConfigId: cfg.id)
     }

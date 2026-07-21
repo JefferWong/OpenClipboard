@@ -12,12 +12,27 @@ public class AppGroupStoreModule: Module {
 
     AsyncFunction("saveServers") { (json: String) throws -> Void in
       let list = try self.decoder.decode(ServerConfigList.self, from: Data(json.utf8))
-      self.store.saveServers(list)
+      try self.store.saveServers(list)
     }
 
     AsyncFunction("getServers") { () throws -> String in
-      let data = try self.encoder.encode(self.store.loadServers())
+      let list = try self.store.loadServers()
+      let data = try self.encoder.encode(list)
       return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    AsyncFunction("putCredential") { (reference: String?, username: String, password: String) throws -> String in
+      try CredentialVault.shared.put(reference: reference, username: username, password: password)
+    }
+
+    AsyncFunction("getCredential") { (reference: String) throws -> String? in
+      guard let credential = try CredentialVault.shared.get(reference: reference) else { return nil }
+      let data = try self.encoder.encode(credential)
+      return String(data: data, encoding: .utf8)
+    }
+
+    AsyncFunction("deleteCredential") { (reference: String) throws -> Void in
+      try CredentialVault.shared.delete(reference: reference)
     }
 
     AsyncFunction("saveSettings") { (json: String) throws -> Void in

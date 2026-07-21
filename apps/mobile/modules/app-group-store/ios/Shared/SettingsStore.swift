@@ -211,27 +211,33 @@ public final class SettingsStore: @unchecked Sendable {
         }
     }
 
+    private enum PersistenceError: Error {
+        case serverConfigWriteFailed
+    }
+
     // MARK: - ServerConfigList
 
     /// Load the server list, performing one-shot legacy migration (§5.5)
     /// if `server_config_list` is absent and `server_config` is present.
-    public func loadServers() -> ServerConfigList {
+    public func loadServers() throws -> ServerConfigList {
         defaults.synchronize()
         if let data = defaults.data(forKey: AppSettings.PersistenceKey.serverConfigList) {
-            if let list = try? decoder.decode(ServerConfigList.self, from: data) {
-                return list
+            let list = try decoder.decode(ServerConfigList.self, from: data)
+
+            // ServerConfig.init(from:) migrates legacy plaintext into Keychain.
+            // Rewrite only when legacy fields were actually present.
+            let rawConfig = String(data: data, encoding: .utf8)
+            if rawConfig?.contains("\"username\"") == true ||
+                rawConfig?.contains("\"password\"") == true {
+                try saveServers(list)
             }
-            // Corruption policy returns the empty default — but losing the
-            // whole server list is the worst silent failure this store can
-            // produce, so leave a loud trace.
-            log.fault("loadServers: server_config_list blob (\(data.count, privacy: .public) bytes) failed to decode — returning empty list")
-            return ServerConfigList()
+            return list
         }
 
-        if let legacyData = defaults.data(forKey: AppSettings.PersistenceKey.legacyServerConfig),
-           let legacy = try? decoder.decode(LegacyServerConfig.self, from: legacyData) {
-            let migrated = legacy.migrated()
-            saveServers(migrated)
+        if let legacyData = defaults.data(forKey: AppSettings.PersistenceKey.legacyServerConfig) {
+            let legacy = try decoder.decode(LegacyServerConfig.self, from: legacyData)
+            let migrated = try legacy.migrated()
+            try saveServers(migrated)
             defaults.removeObject(forKey: AppSettings.PersistenceKey.legacyServerConfig)
             log.info("loadServers: migrated legacy server_config to server_config_list (§5.5)")
             return migrated
@@ -240,10 +246,12 @@ public final class SettingsStore: @unchecked Sendable {
         return ServerConfigList()
     }
 
-    public func saveServers(_ list: ServerConfigList) {
-        guard let data = try? encoder.encode(list) else { return }
+    public func saveServers(_ list: ServerConfigList) throws {
+        let data = try encoder.encode(list)
         defaults.set(data, forKey: AppSettings.PersistenceKey.serverConfigList)
-        defaults.synchronize()
+        guard defaults.synchronize() else {
+            throw PersistenceError.serverConfigWriteFailed
+        }
     }
 
     // MARK: - AppSettings

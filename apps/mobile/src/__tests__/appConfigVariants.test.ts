@@ -37,6 +37,12 @@ describe('Expo app config variants', () => {
     expect(config.ios.infoPlist.UCAppGroupIdentifier).toBe(
       'group.app.uniclipboard.UniClipboard.dev'
     );
+    expect(config.ios.infoPlist.UCKeychainAccessGroup).toBe(
+      '8XG39X5CL8.app.uniclipboard.UniClipboard.dev.shared'
+    );
+    expect(config.ios.entitlements['keychain-access-groups']).toEqual([
+      '8XG39X5CL8.app.uniclipboard.UniClipboard.dev.shared',
+    ]);
     expect(appGroups).toEqual(['group.app.uniclipboard.UniClipboard.dev']);
     expect(extensions).toEqual([
       {
@@ -44,6 +50,7 @@ describe('Expo app config variants', () => {
         bundleIdentifier: 'app.uniclipboard.UniClipboard.dev.Share',
         entitlements: {
           'com.apple.security.application-groups': ['group.app.uniclipboard.UniClipboard.dev'],
+          'keychain-access-groups': ['8XG39X5CL8.app.uniclipboard.UniClipboard.dev.shared'],
         },
       },
       {
@@ -51,6 +58,7 @@ describe('Expo app config variants', () => {
         bundleIdentifier: 'app.uniclipboard.UniClipboard.dev.Keyboard',
         entitlements: {
           'com.apple.security.application-groups': ['group.app.uniclipboard.UniClipboard.dev'],
+          'keychain-access-groups': ['8XG39X5CL8.app.uniclipboard.UniClipboard.dev.shared'],
         },
       },
     ]);
@@ -64,6 +72,12 @@ describe('Expo app config variants', () => {
     expect(config.name).toBe('UniClip');
     expect(config.ios.bundleIdentifier).toBe('app.uniclipboard.UniClipboard');
     expect(config.ios.infoPlist.UCAppGroupIdentifier).toBe('group.app.uniclipboard.UniClipboard');
+    expect(config.ios.infoPlist.UCKeychainAccessGroup).toBe(
+      '8XG39X5CL8.app.uniclipboard.UniClipboard.shared'
+    );
+    expect(config.ios.entitlements['keychain-access-groups']).toEqual([
+      '8XG39X5CL8.app.uniclipboard.UniClipboard.shared',
+    ]);
     expect(appGroups).toEqual([
       'group.app.uniclipboard.UniClipboard',
       'group.app.uniclipboard.ios',
@@ -77,6 +91,7 @@ describe('Expo app config variants', () => {
             'group.app.uniclipboard.UniClipboard',
             'group.app.uniclipboard.ios',
           ],
+          'keychain-access-groups': ['8XG39X5CL8.app.uniclipboard.UniClipboard.shared'],
         },
       },
       {
@@ -87,6 +102,7 @@ describe('Expo app config variants', () => {
             'group.app.uniclipboard.UniClipboard',
             'group.app.uniclipboard.ios',
           ],
+          'keychain-access-groups': ['8XG39X5CL8.app.uniclipboard.UniClipboard.shared'],
         },
       },
     ]);
@@ -126,6 +142,31 @@ describe('Expo app config variants', () => {
       const source = readFileSync(path.join(process.cwd(), file), 'utf8');
       expect(source).not.toContain('UC_APP_GROUP');
       expect(source).not.toContain('withExtensionAppGroupBuildSetting');
+    }
+  });
+
+  it('keeps extension vault implementations and generated security inputs aligned', () => {
+    const normalize = (source: string) =>
+      source
+        .replace(/\/\/\/.*$/gm, '')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\s+/g, '');
+    expect(
+      normalize(
+        readFileSync(
+          path.join(process.cwd(), 'modules/app-group-store/ios/Shared/CredentialVault.swift'),
+          'utf8'
+        )
+      )
+    ).toBe(
+      normalize(
+        readFileSync(path.join(process.cwd(), 'targets/_shared/CredentialVault.swift'), 'utf8')
+      )
+    );
+    for (const file of ['targets/share/Info.plist', 'targets/keyboard/Info.plist']) {
+      const source = readFileSync(path.join(process.cwd(), file), 'utf8');
+      expect(source).toContain('<key>UCKeychainAccessGroup</key>');
+      expect(source).toContain('$(UC_KEYCHAIN_ACCESS_GROUP)');
     }
   });
 });

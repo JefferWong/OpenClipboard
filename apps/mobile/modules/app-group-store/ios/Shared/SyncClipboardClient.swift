@@ -47,7 +47,13 @@ public final class SyncClipboardClient: @unchecked Sendable {
         session: URLSession? = nil
     ) throws {
         self.baseURL = try Self.normalizeBaseURL(server.url)
-        self.authHeader = Self.basicAuthHeader(username: server.username, password: server.password)
+        guard let credential = try CredentialVault.shared.get(reference: server.credentialRef) else {
+            throw CredentialVaultError.malformedCredential
+        }
+        self.authHeader = Self.basicAuthHeader(
+            username: credential.username,
+            password: credential.password
+        )
         if let session {
             self.session = session
             self.ownsSession = false

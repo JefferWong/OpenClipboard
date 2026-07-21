@@ -9,8 +9,7 @@ export interface AppGroupServerConfigDTO {
   id: string;
   name?: string;
   urls: string[];
-  username: string;
-  password: string;
+  credentialRef?: string;
 }
 
 export interface AppGroupServerConfigListDTO {
@@ -136,8 +135,7 @@ function mapServerToAppGroupDTO(
     id,
     ...(server.name ? { name: server.name } : {}),
     urls,
-    username: server.username ?? '',
-    password: server.password ?? '',
+    ...(server.credentialRef ? { credentialRef: server.credentialRef } : {}),
   };
 }
 
