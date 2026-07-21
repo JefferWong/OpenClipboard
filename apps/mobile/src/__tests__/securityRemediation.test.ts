@@ -64,4 +64,32 @@ describe('security remediation source invariants', () => {
       expect(source).not.toContain('guard let migrated = try?');
     }
   });
+  it('propagates iOS server configuration persistence failures at callers', () => {
+    const stores = [
+      read('modules/app-group-store/ios/Shared/SettingsStore.swift'),
+      read('targets/_shared/SettingsStore.swift'),
+    ];
+
+    for (const source of stores) {
+      expect(source).toContain('public func saveServers(_ list: ServerConfigList) throws');
+      expect(source).toContain('try saveServers(migrated)');
+      expect(source).toContain('let data = try encoder.encode(list)');
+      expect(source).not.toContain('guard let data = try? encoder.encode(list)');
+
+      const saveIndex = source.indexOf('try saveServers(migrated)');
+      const deleteIndex = source.indexOf(
+        'defaults.removeObject(forKey: AppSettings.PersistenceKey.legacyServerConfig)'
+      );
+
+      expect(saveIndex).toBeGreaterThanOrEqual(0);
+      expect(deleteIndex).toBeGreaterThan(saveIndex);
+    }
+
+    const module = read('modules/app-group-store/ios/AppGroupStoreModule.swift');
+    const keyboard = read('targets/keyboard/KeyboardModel.swift');
+
+    expect(module).toContain('try self.store.saveServers(list)');
+    expect(keyboard).toContain('try store.saveServers(list)');
+    expect(keyboard).toContain('setActiveServer: failed to save servers');
+  });
 });

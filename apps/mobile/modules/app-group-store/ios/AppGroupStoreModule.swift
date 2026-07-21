@@ -12,7 +12,7 @@ public class AppGroupStoreModule: Module {
 
     AsyncFunction("saveServers") { (json: String) throws -> Void in
       let list = try self.decoder.decode(ServerConfigList.self, from: Data(json.utf8))
-      self.store.saveServers(list)
+      try self.store.saveServers(list)
     }
 
     AsyncFunction("getServers") { () throws -> String in

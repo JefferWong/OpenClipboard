@@ -367,7 +367,14 @@ final class KeyboardModel: ObservableObject {
         }
         guard list.activeConfigId != id, list.configs.contains(where: { $0.id == id }) else { return }
         list.activeConfigId = id
-        store.saveServers(list)
+        do {
+            try store.saveServers(list)
+        } catch {
+            log.error("setActiveServer: failed to save servers — \(String(describing: error))")
+            lastError = Self.message(for: error)
+            flashSync(.failure)
+            return
+        }
         serverLabel = list.activeConfig?.displayLabel ?? ""
         refresh(force: true)
     }
