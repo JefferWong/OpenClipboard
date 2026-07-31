@@ -11,12 +11,7 @@ import { log } from './Logger';
 
 export type TransferType = 'upload' | 'download';
 export type TransferTaskStatus =
-  | 'pending'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'waitForRetry';
+  'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'waitForRetry';
 
 export interface TransferTask {
   profileId: string;

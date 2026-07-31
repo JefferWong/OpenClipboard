@@ -72,12 +72,7 @@ const SSE_FEATURE_RETRY_MS = 5 * 60 * 1000;
 const OFFLINE_URL_ROTATE_AFTER = 2;
 
 export type SyncEngineState =
-  | 'Idle'
-  | 'Succeeded'
-  | 'HasNewUnwritten'
-  | 'OfflineRetrying'
-  | 'AuthFailed'
-  | 'LoopDetected';
+  'Idle' | 'Succeeded' | 'HasNewUnwritten' | 'OfflineRetrying' | 'AuthFailed' | 'LoopDetected';
 
 export interface SyncEngineStatus {
   state: SyncEngineState;
