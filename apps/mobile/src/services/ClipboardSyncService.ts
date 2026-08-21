@@ -40,8 +40,7 @@ class ClipboardSyncService {
   private clipboardUnsub: (() => void) | null = null;
   private historyUnsub: (() => void) | null = null;
   private transferQueueHandler:
-    | ((task: import('./HistoryTransferQueue').TransferTask) => Promise<void>)
-    | null = null;
+    ((task: import('./HistoryTransferQueue').TransferTask) => Promise<void>) | null = null;
   /** App 是否在前台（影响自动复制策略） */
   private isAppActive = true;
   /** 当前正在进行的远程文件下载 AbortController */
