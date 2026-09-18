@@ -193,15 +193,13 @@ function shouldSkipEmptyDefaultServerOverwrite(
   settings: AppSettings,
   servers: AppGroupServerConfigListDTO
 ): Promise<boolean> {
-  if (
-    !(
-      servers.configs.length === 0 &&
-      servers.activeConfigId === null &&
-      settings.servers.length === 0 &&
-      settings.activeServerIndex === -1 &&
-      isFreshDefaultConfig(settings)
-    )
-  ) {
+  if (!(
+    servers.configs.length === 0 &&
+    servers.activeConfigId === null &&
+    settings.servers.length === 0 &&
+    settings.activeServerIndex === -1 &&
+    isFreshDefaultConfig(settings)
+  )) {
     return Promise.resolve(false);
   }
 
