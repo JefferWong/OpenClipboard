@@ -947,8 +947,7 @@ const InlineCopyButton: React.FC<{ value: string }> = ({ value }) => {
 }
 
 type EditErrorDispatch =
-  | { kind: 'field'; field: FieldErrorKey; message: string }
-  | { kind: 'form'; message: string }
+  { kind: 'field'; field: FieldErrorKey; message: string } | { kind: 'form'; message: string }
 
 function classifyEditError(
   t: ReturnType<typeof useTranslation>['t'],

@@ -65,8 +65,7 @@ export interface ConnectUriResult {
 }
 
 export type ParseConnectUriOutcome =
-  | { ok: true; value: ConnectUriResult }
-  | { ok: false; error: ConnectUriError };
+  { ok: true; value: ConnectUriResult } | { ok: false; error: ConnectUriError };
 
 function mapRustError(message: string): ConnectUriError {
   if (message.includes('InvalidScheme')) return 'INVALID_SCHEME';
