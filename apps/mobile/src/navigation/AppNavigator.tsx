@@ -20,14 +20,7 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { SettingsSubScreen } from '@/screens/settings/SettingsSubScreen';
 
 export type SettingsSubSection =
-  | 'sync'
-  | 'history'
-  | 'background'
-  | 'appearance'
-  | 'sms'
-  | 'storage'
-  | 'about'
-  | 'developer';
+  'sync' | 'history' | 'background' | 'appearance' | 'sms' | 'storage' | 'about' | 'developer';
 
 export type RootStackParamList = {
   Onboarding: undefined;
