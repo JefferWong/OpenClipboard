@@ -75,11 +75,7 @@ export type ClipboardEntryType = 'text' | 'image' | 'file' | 'richtext' | 'unkno
 export type ClipboardEntryTag = 'link' | 'code'
 
 export type ClipboardEntryContent =
-  | ClipboardTextItem
-  | ClipboardImageItem
-  | ClipboardFileItem
-  | ClipboardLinkItem
-  | ClipboardCodeItem
+  ClipboardTextItem | ClipboardImageItem | ClipboardFileItem | ClipboardLinkItem | ClipboardCodeItem
 
 export interface ClipboardEntry {
   id: string

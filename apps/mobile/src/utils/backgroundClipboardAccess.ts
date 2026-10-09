@@ -32,11 +32,7 @@ export interface BackgroundClipboardSetupState {
 }
 
 export type BackgroundClipboardSetupActionResult =
-  | 'completed'
-  | 'waiting-for-return'
-  | 'command-copied'
-  | 'no-action'
-  | 'failed';
+  'completed' | 'waiting-for-return' | 'command-copied' | 'no-action' | 'failed';
 
 const BACKGROUND_CLIPBOARD_METHODS: AndroidSettings['clipboardAccessMethod'][] = [
   'shizuku',
